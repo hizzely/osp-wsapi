@@ -12,4 +12,5 @@ require (
 	github.com/volatiletech/inflect v0.0.0-20170731032912-e7201282ae8d // indirect
 	github.com/volatiletech/null v8.0.0+incompatible
 	github.com/volatiletech/sqlboiler v3.4.0+incompatible
+	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
 )
