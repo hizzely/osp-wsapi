@@ -13,3 +13,9 @@
 
 # Dependency directories
 vendor/
+
+# exclude models
+models/
+
+# exclude user-specific config
+config/*.json
