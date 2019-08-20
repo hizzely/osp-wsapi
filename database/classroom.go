@@ -5,6 +5,11 @@ import (
 	"github.com/volatiletech/sqlboiler/boil"
 )
 
+// Classroom get by ID
+func Classroom(id int) (*models.KelasMH, error) {
+	return models.FindKelasMH(Ctx, Db, id)
+}
+
 // ClassroomAll get all classroom record
 func ClassroomAll() (models.KelasMHSlice, error) {
 	return models.KelasMHS().All(Ctx, Db)
