@@ -2,6 +2,7 @@ package database
 
 import (
 	"log"
+	"strings"
 
 	"github.com/hizzely/osp-wsapi/models"
 	"github.com/volatiletech/sqlboiler/boil"
@@ -84,4 +85,65 @@ func DosenLectureSubjectCreate(dosenID string, matkulID, kelasID int) error {
 	}
 
 	return commitErr
+}
+
+// DosenPresenceSessionCreateClassroom create new classroom session
+func DosenPresenceSessionCreateClassroom(matkulID, kelasID int, dosenID, judul, deskripsi, sessionCode string) error {
+	session := models.SesiPresensi{
+		Kode:         sessionCode,
+		DosenID:      dosenID,
+		MatkulID:     matkulID,
+		KelasID:      kelasID,
+		KetJudul:     judul,
+		KetDeskripsi: deskripsi,
+		Status:       "aktif",
+	}
+	return session.Insert(Ctx, Db, boil.Infer())
+}
+
+// DosenPresenceSessionDetail get detail from ID
+func DosenPresenceSessionDetail(id int) map[string]interface{} {
+	details, _ := models.FindSesiPresensi(Ctx, Db, id)
+	dosen, _ := details.Dosen().One(Ctx, Db)
+	matkul, _ := details.Matkul().One(Ctx, Db)
+	kelas, _ := details.Kelas().One(Ctx, Db)
+
+	return map[string]interface{} {
+		"details": details,
+		"dosen": dosen,
+		"matkul": matkul,
+		"kelas": kelas,
+	}
+}
+
+// DosenPresenceSessionUpdate update session data
+func DosenPresenceSessionUpdate(id int, judul, deskripsi, status string) (int64, error) {
+	var query strings.Builder
+	query.WriteString(`UPDATE sesi_presensi
+	SET ket_judul = ?, ket_deskripsi = ?, status = ?, updated_at = CURRENT_TIMESTAMP`)
+	if status == "selesai" {
+		query.WriteString(`, ended_at = CURRENT_TIMESTAMP`)
+	}
+	query.WriteString(` WHERE id = ?`)
+
+	result, err := Db.Exec(query.String(), judul, deskripsi, status, id)
+	if err != nil {
+		log.Println(err)
+		return 0, err	
+	}
+
+	return result.RowsAffected()
+}
+
+// DosenPresenceSessionDelete deletes one record by ID
+func DosenPresenceSessionDelete(id int) (int64, error) {
+	session, _ := models.FindSesiPresensi(Ctx, Db, id)
+	return session.Delete(Ctx, Db)
+}
+
+// DosenPresenceSessionRefreshCode refreshes the code
+func DosenPresenceSessionRefreshCode(id int, newCode string) (int64, error) {
+	session, _ := models.FindSesiPresensi(Ctx, Db, id)
+	session.Kode = newCode
+	return session.Update(Ctx, Db, boil.Infer())
 }

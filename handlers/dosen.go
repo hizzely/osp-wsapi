@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	DB "github.com/hizzely/osp-wsapi/database"
 	"github.com/hizzely/osp-wsapi/helpers"
@@ -112,9 +113,9 @@ func DosenLectureSubjectDetail(c echo.Context) error {
 
 // DosenLectureSubjectStore handler
 func DosenLectureSubjectStore(c echo.Context) error {
-	dosenID := c.FormValue("dosen_id")
-	matkulID, _ := strconv.Atoi(c.FormValue("matkul_id"))
-	kelasID, _ := strconv.Atoi(c.FormValue("kelas_id"))
+	dosenID := c.Param("dosen_id")
+	matkulID, _ := strconv.Atoi(c.Param("matkul_id"))
+	kelasID, _ := strconv.Atoi(c.Param("kelas_id"))
 
 	insertErr := DB.DosenLectureSubjectCreate(dosenID, matkulID, kelasID)
 
@@ -138,25 +139,90 @@ func DosenLectureSubjectStore(c echo.Context) error {
 
 // DosenPresenceSessionDetail handler
 func DosenPresenceSessionDetail(c echo.Context) error {
-	return c.String(http.StatusOK, "DosenPresenceSessionDetail")
+	presenceID, _ := strconv.Atoi(c.Param("id"))
+	details := DB.DosenPresenceSessionDetail(presenceID)
+
+	return c.JSON(http.StatusOK, details)
 }
 
 // DosenPresenceSessionStore handler
 func DosenPresenceSessionStore(c echo.Context) error {
-	return c.String(http.StatusOK, "DosenPresenceSessionStore")
+	dosenID := c.FormValue("dosen_id")
+	matkulID, _ := strconv.Atoi(c.FormValue("matkul_id"))
+	kelasID, _ := strconv.Atoi(c.FormValue("kelas_id"))
+	judul := c.FormValue("judul")
+	deskripsi := c.FormValue("deskripsi")
+	sessionCode, _ := helpers.GenerateRandomString(6)
+
+	// If at some point the session code already used, retry.
+	for i := 0; i < 3; i++ {
+		resultErr := DB.DosenPresenceSessionCreateClassroom(matkulID, kelasID, dosenID, judul, deskripsi, sessionCode)
+		if resultErr == nil {
+			break
+		}
+		sessionCode, _ = helpers.GenerateRandomString(6)
+	}
+
+	kelas, _ := DB.Classroom(kelasID)
+	matkul, _ := DB.Matkul(matkulID)
+	dosen, _ := DB.Dosen(dosenID)
+
+	return c.JSON(http.StatusCreated, map[string]interface{}{
+		"id_dosen":    dosenID,
+		"nama_dosen":  dosen.NamaLengkap,
+		"id_matkul":   matkulID,
+		"nama_matkul": matkul.NamaMatkul,
+		"id_kelas":    kelasID,
+		"nama_kelas":  kelas.NamaKelas,
+		"kode":        sessionCode,
+		"start":       time.Now(),
+		"judul":       judul,
+		"deskripsi":   deskripsi,
+	})
 }
 
 // DosenPresenceSessionUpdate handler
 func DosenPresenceSessionUpdate(c echo.Context) error {
-	return c.String(http.StatusOK, "DosenPresenceSessionUpdate")
+	sessionID, _ := strconv.Atoi(c.Param("id"))
+	judul := c.FormValue("judul")
+	deskripsi := c.FormValue("deskripsi")
+	status := c.FormValue("status")
+	result, err := DB.DosenPresenceSessionUpdate(sessionID, judul, deskripsi, status)
+
+	if err != nil || result == 0 {
+		log.Println(err)
+		return c.JSON(http.StatusNotModified, "Not modified")
+	}
+
+	return c.JSON(http.StatusOK, "Success")
 }
 
 // DosenPresenceSessionDelete handler
 func DosenPresenceSessionDelete(c echo.Context) error {
-	return c.String(http.StatusOK, "DosenPresenceSessionDelete")
+	sessionID, _ := strconv.Atoi(c.Param("id"))
+	result, err := DB.DosenPresenceSessionDelete(sessionID)
+
+	if err != nil || result == 0 {
+		log.Println(err)
+		return c.JSON(http.StatusNotModified, "Not modified")
+	}
+
+	return c.JSON(http.StatusOK, "Success")
 }
 
 // DosenPresenceSessionRefreshCode handler
 func DosenPresenceSessionRefreshCode(c echo.Context) error {
-	return c.String(http.StatusOK, "DosenPresenceSessionRefreshCode")
+	sessionID, _ := strconv.Atoi(c.Param("id"))
+	randomCode, _ := helpers.GenerateRandomString(6)
+	result, err := DB.DosenPresenceSessionRefreshCode(sessionID, randomCode)
+
+	if err != nil || result == 0 {
+		log.Println(err)
+		return c.JSON(http.StatusNotModified, "Not modified")
+	}
+
+	return c.JSON(http.StatusOK, map[string]string {
+		"status": "success",
+		"kode": randomCode,
+	})
 }
