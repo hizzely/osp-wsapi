@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	DB "github.com/hizzely/osp-wsapi/database"
 	"github.com/hizzely/osp-wsapi/helpers"
@@ -103,12 +104,30 @@ func DosenAccountLogin(c echo.Context) error {
 
 // DosenLectureSubjectDetail handler
 func DosenLectureSubjectDetail(c echo.Context) error {
-	return c.String(http.StatusOK, "DosenLectureSubjectDetail")
+	dosenID := c.Param("id")
+	result, _ := DB.DosenLectureSubject(dosenID)
+
+	return c.JSON(http.StatusOK, result)
 }
 
 // DosenLectureSubjectStore handler
 func DosenLectureSubjectStore(c echo.Context) error {
-	return c.String(http.StatusOK, "DosenLectureSubjectStore")
+	dosenID := c.FormValue("dosen_id")
+	matkulID, _ := strconv.Atoi(c.FormValue("matkul_id"))
+	kelasID, _ := strconv.Atoi(c.FormValue("kelas_id"))
+
+	insertErr := DB.DosenLectureSubjectCreate(dosenID, matkulID, kelasID)
+
+	if insertErr != nil {
+		log.Println(insertErr)
+		return c.JSON(http.StatusNotModified, map[string]string{
+			"msg": "Not modified",
+		})
+	}
+
+	return c.JSON(http.StatusCreated, map[string]interface{}{
+		"msg": "New lecture subject created.",
+	})
 }
 
 /*
